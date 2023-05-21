@@ -1,3 +1,12 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import fastify from 'fastify'
 
-serve((req: Request) => Response.json({ message: "Hello World" }));
+import { eventController } from './components/event/controller.js'
+import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox'
+
+const server = fastify.default({}).withTypeProvider<TypeBoxTypeProvider>()
+
+server.register(eventController)
+
+const port = 8080
+await server.listen({ host: '0.0.0.0', port })
+console.log(`Server listening on port ${port}`)

@@ -1,7 +1,12 @@
 {
-    "deno.enable": true,
-    "editor.formatOnSave": true,
-    "[typescript]": {
-        "editor.defaultFormatter": "denoland.vscode-deno"
-    }
+    "[json][typescript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.expand": false,
+    "explorer.fileNesting.patterns": {
+        "package.json": ".editorconfig, .eslint*, .pnpm*, .prettier*, vite.config.*, pnpm*, prettier*, tsconfig.*, .npmrc, .swcrc, .gitignore",
+        "*config.yml": "$(capture)config.template.yml",
+    },
 }

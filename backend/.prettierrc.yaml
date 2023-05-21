@@ -1,0 +1,15 @@
+printWidth: 80
+semi: false
+singleQuote: true
+trailingComma: all
+arrowParens: always
+
+plugins:
+    - './node_modules/@trivago/prettier-plugin-sort-imports'
+
+# sort-imports
+importOrder:
+    - '^#root/(.*)$'
+    - '[./]'
+importOrderSeparation: true
+importOrderSortSpecifiers: true
