@@ -1,12 +1,14 @@
 import geoip from 'geoip-lite'
+import iso from 'iso-3166-1'
 
 /**
- * @returns 2 letter ISO-3166-1 country code https://www.iban.com/country-codes
+ * @returns Country name
  */
-export function getContryCodeByIp(ip: string): string | undefined {
+export function getCountryByIp(ip: string): string | undefined {
     const record = geoip.lookup(ip)
     if (record === null) {
         return undefined
     }
-    return record.country
+    const countryCode = record.country
+    return iso.whereAlpha2(countryCode)?.country
 }

@@ -4,8 +4,8 @@ import { StandardType as Type } from '@sinclair/typebox'
 
 export const Post = {
     body: Type.Object({
-        userId: Type.String(),
-        sessionId: Type.String(),
-        page: Type.String(),
+        token: Type.Optional(Type.String()),
+        path: Type.String(),
+        referrer: Type.Optional(Type.String()),
     }),
 } satisfies FastifySchema

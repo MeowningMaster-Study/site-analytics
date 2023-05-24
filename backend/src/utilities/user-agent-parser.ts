@@ -1,6 +1,6 @@
 import UAParser from 'ua-parser-js'
 
-type OneOf<T extends readonly unknown[]> = T[number]
+import { OneOf } from './helper-types.js'
 
 const deviceTypes = ['desktop', 'mobile', 'tablet'] as const
 type DeviceType = OneOf<typeof deviceTypes>
@@ -19,7 +19,7 @@ export function parseUserAgent(userAgent: string) {
     }
 }
 
-function normalizeDeviceType(type: string | undefined): DeviceType | undefined {
+function normalizeDeviceType(type: string | undefined): DeviceType {
     switch (type) {
         case 'mobile':
         case 'tablet':
