@@ -9,6 +9,8 @@ const validator = new Ajv.default()
 
 const Schema = Type.Object({
     JWT_SECRET: Type.String(),
+    INFLUXDB_URL: Type.String(),
+    INFLUXDB_TOKEN: Type.String(),
 })
 
 if (!validator.compile(Schema)(process.env)) {
@@ -16,3 +18,7 @@ if (!validator.compile(Schema)(process.env)) {
 }
 
 export const jwtSecret = process.env['JWT_SECRET']
+export const influxDB = {
+    url: process.env['INFLUXDB_URL'],
+    token: process.env['INFLUXDB_TOKEN'],
+}

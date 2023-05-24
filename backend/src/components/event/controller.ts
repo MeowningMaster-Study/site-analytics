@@ -2,15 +2,45 @@ import * as jwt from 'jsonwebtoken'
 
 import { jwtSecret } from '#root/config.js'
 import { getCountryByIp } from '#root/utilities/geo-lookup.js'
+import { parseReferrer } from '#root/utilities/referrer-type.js'
 import { parseUserAgent } from '#root/utilities/user-agent-parser.js'
 
+import * as db from '../influxdb/connection.js'
 import { Post } from './types.js'
 import { FastifyPluginCallbackTypebox } from '@fastify/type-provider-typebox'
 import { createId } from '@paralleldrive/cuid2'
 
-type Token = {
+type Auth = {
     user: string
     session: string
+    /**
+     * is new session
+     */
+    isNew: boolean
+}
+
+function normalizeAuth(token: string | undefined): Auth {
+    if (token === undefined) {
+        return { user: createId(), session: createId(), isNew: true }
+    }
+    try {
+        const auth = jwt.verify(token, jwtSecret) as Auth
+        auth.isNew = false
+        return auth
+    } catch (error) {
+        if (typeof error !== 'object') {
+            throw error
+        }
+        if (error instanceof jwt.TokenExpiredError) {
+            const tokenContents = jwt.decode(token) as Auth
+            return {
+                user: tokenContents.user,
+                session: createId(),
+                isNew: true,
+            }
+        }
+        throw error
+    }
 }
 
 export const eventController: FastifyPluginCallbackTypebox = (
@@ -19,35 +49,33 @@ export const eventController: FastifyPluginCallbackTypebox = (
     done,
 ) => {
     server.post('/event', { schema: Post }, (request, reply) => {
-        const { token } = request.body
-        let user: string
-        let session: string
-        if (token === undefined) {
-            user = createId()
-            session = createId()
-        } else {
-            try {
-                const tokenContents = jwt.verify(token, jwtSecret) as Token
-                user = tokenContents.user
-                session = tokenContents.session
-            } catch (e) {
-                if (typeof e !== 'object') {
-                    throw e
-                }
-                if (e instanceof jwt.TokenExpiredError) {
-                    session = createId()
-                }
-            }
-        }
+        const auth = normalizeAuth(request.body.token)
 
-        const countryCode = getCountryByIp(request.ip)
-        const userAgent = parseUserAgent(request.headers['user-agent'] ?? '')
-        reply.header('content-type', 'application/json')
-        return reply.send({
-            body: request.body,
-            countryCode,
-            userAgent,
+        db.writeView({
+            ...auth,
+            path: request.body.path,
         })
+
+        if (auth.isNew) {
+            const country = getCountryByIp(request.ip)
+            const userAgent = parseUserAgent(
+                request.headers['user-agent'] ?? '',
+            )
+            const referrerHeader = request.headers['referer']
+            const referral = parseReferrer(referrerHeader)
+
+            db.writeSession({
+                ...auth,
+                deviceType: userAgent.deviceType,
+                country: country ?? '',
+                browserName: userAgent.browser.name ?? '',
+                browserVersion: userAgent.browser.version ?? '',
+                osName: userAgent.os.name ?? '',
+                osVersion: userAgent.os.version ?? '',
+                referralType: referral.type,
+                referralDomain: referral.domain,
+            })
+        }
     })
     done()
 }
