@@ -3,17 +3,14 @@ import { url, token } from './config.js';
 import { createId } from '@paralleldrive/cuid2';
 import { faker } from '@faker-js/faker';
 import * as random from './random.js';
-import { asMiliseconds } from './constants.js';
+import { asMiliseconds, sitePaths } from './constants.js';
 
 const org = 'org';
 const bucket = 'data';
 
 const influxDB = new InfluxDB({ url, token });
 
-function generateRecords(startDate, stopDate) {
-  const startTimestamp = startDate.getTime()
-  const stopTimestamp = stopDate.getTime()
-
+function generateRecords(startTimestamp, stopTimestamp) {
   const writeApi = influxDB.getWriteApi(org, bucket, 'ms');
 
   /**
@@ -51,25 +48,20 @@ function generateRecords(startDate, stopDate) {
     return id
   }
 
-  function generateSessionId(userId) {
-    const sessions = getSessionsByUser(userId)
-    return random.arrayElement(sessions)
-  }
-
-  const sitePaths = random.array(25, random.sitePath)
+  const countries = random.array(15, () => faker.location.country())
+  const referrals = random.array(15, faker.internet.domainName)
 
   function generateSession() {
     const userId = generateUserId();
     const sessionId = addSessionId(userId);
     const deviceType = random.arrayElement(['desktop', 'mobile', 'tablet']);
-    const country = faker.location.countryCode();
+    const country = random.arrayElement(countries);
     const browserName = random.arrayElement(['Chrome', 'Safari', 'Firefox', 'Vivaldi', 'Brave']);
     const browserVersion = random.int(90, 100, true);
     const osName = random.arrayElement(['Windows', 'Linux', 'Mac', 'IOS', 'Android']);
     const osVersion = random.int(6, 10, true);
-    const referralType = random.arrayElement(['organic_search', 'direct', 'referral']);
-    const referralDomain = faker.internet.domainName();
-    const referralUri = faker.internet.url();
+    const referralType = random.arrayElement(['organic_search', 'direct', 'referral', 'social']);
+    const referralDomain = random.arrayElement(referrals);
     const sessionTimestamp = random.int(startTimestamp, stopTimestamp);
 
     const sessionPoint = new Point('sessions')
@@ -83,7 +75,6 @@ function generateRecords(startDate, stopDate) {
       .tag('os_version', osVersion.toString())
       .tag('referral_type', referralType)
       .tag('referral_domain', referralDomain)
-      .tag('referral_uri', referralUri)
       .intField('count', 1)
       .timestamp(sessionTimestamp)
 
@@ -91,12 +82,12 @@ function generateRecords(startDate, stopDate) {
     writeApi.writePoint(sessionPoint)
 
     const isBounce = random.boolean(0.5)
-    const viewsCount = isBounce ? 1 : random.int(1, 10)
+    const viewsCount = isBounce ? 1 : random.int(1, 10, true)
     for (let i = 0; i < viewsCount; i++) {
       const path = random.arrayElement(sitePaths)
       const viewTimestamp = i == 0
         ? sessionTimestamp
-        : random.int(sessionTimestamp, sessionTimestamp + asMiliseconds.minute * 30)
+        : random.int(sessionTimestamp, sessionTimestamp + asMiliseconds.minute * 30, true)
 
       const viewPoint = new Point('views')
         .tag('session', sessionId)
@@ -110,7 +101,7 @@ function generateRecords(startDate, stopDate) {
   }
 
   function generateSessions() {
-    for (let i = 0; i < 2000; i++) {
+    for (let i = 0; i < 5000; i++) {
       generateSession()
     }
   }
@@ -120,5 +111,6 @@ function generateRecords(startDate, stopDate) {
 }
 
 
-
-await generateRecords(new Date("2023-05-01"), new Date("2023-05-31"))
+const now = Date.now()
+const monthAgo = now - asMiliseconds.day * 30
+await generateRecords(monthAgo, now)
