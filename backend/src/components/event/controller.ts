@@ -1,6 +1,7 @@
-import * as jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 
 import { jwtSecret } from '#root/config.js'
+import { logger } from '#root/logger.js'
 import { getCountryByIp } from '#root/utilities/geo-lookup.js'
 import { parseReferrer } from '#root/utilities/referrer-type.js'
 import { parseUserAgent } from '#root/utilities/user-agent-parser.js'
@@ -48,7 +49,7 @@ export const eventController: FastifyPluginCallbackTypebox = (
     options,
     done,
 ) => {
-    server.post('/event', { schema: Post }, (request, reply) => {
+    server.post('/', { schema: Post }, (request, reply) => {
         const auth = normalizeAuth(request.body.token)
 
         db.writeView({
@@ -61,8 +62,7 @@ export const eventController: FastifyPluginCallbackTypebox = (
             const userAgent = parseUserAgent(
                 request.headers['user-agent'] ?? '',
             )
-            const referrerHeader = request.headers['referer']
-            const referral = parseReferrer(referrerHeader)
+            const referral = parseReferrer(request.body.referrer)
 
             db.writeSession({
                 ...auth,
@@ -76,6 +76,19 @@ export const eventController: FastifyPluginCallbackTypebox = (
                 referralDomain: referral.domain,
             })
         }
+
+        const replyToken = jwt.sign(
+            { user: auth.user, session: auth.session },
+            jwtSecret,
+            { expiresIn: '30m' },
+        )
+        reply.header('content-type', 'plain/text').send(replyToken)
     })
+
+    server.post('/flush', async () => {
+        await db.writeApi.flush()
+        logger.debug('DB writer flushed')
+    })
+
     done()
 }

@@ -1,5 +1,7 @@
+import { logger } from '#root/logger.js'
+
 import * as config from '../../config.js'
-import { InfluxDB, Point, WriteApi } from '@influxdata/influxdb-client'
+import { InfluxDB, Point } from '@influxdata/influxdb-client'
 
 const org = 'org'
 const bucket = 'data'
@@ -45,6 +47,7 @@ export function writeSession(data: SessionPoint) {
         .tag('referral_domain', data.referralDomain)
         .intField('count', 1)
     writeApi.writePoint(point)
+    logger.debug(point.toLineProtocol(), 'Session')
 }
 
 export type ViewPoint = {
@@ -60,4 +63,5 @@ export function writeView(data: ViewPoint) {
         .tag('path', data.path)
         .intField('count', 1)
     writeApi.writePoint(point)
+    logger.debug(point.toLineProtocol(), 'View')
 }
